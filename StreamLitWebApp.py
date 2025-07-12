@@ -1,0 +1,75 @@
+import requests
+import streamlit as st
+from bs4 import BeautifulSoup
+import re
+import json
+import time
+
+
+st.title("AI News summarizer")
+st.subheader("Get daily top headlines from your favourite news channel")
+channel=st.selectbox("Choose you channel", ['The Hindu', 'N.D.T.V.', 'Indian Express', 'BBC News', 'India today'])
+
+categories=st.multiselect("choose categories you are interested in: ", ['sports', 'Geopolitics', 'Entrtainment', 'Science', 'Economy'])
+
+
+if categories:
+    category_list=','.join(categories)
+else:
+    category_list="All types of news categories"
+
+url_map={
+     "The Hindu": "https://www.thehindu.com/",
+    "N.D.T.V.": "https://m.ndtv.com/",
+    "Indian Express": "https://indianexpress.com/",
+    "BBC News": "https://www.bbc.com/news",
+    "India today": "https://www.indiatoday.in/news.html"
+}
+
+url=url_map[channel]
+
+if st.button("Fetch news"):
+    #  st.info("Fetching....please wait, this can take some time")
+     with st.status("Fetching....please wait, this can take some time", expanded=True) as fetch_status:
+        headers={'User-Agent': 'Mozilla-5.0'}
+        response=requests.get(url, headers=headers)
+        soup=BeautifulSoup(response.content, 'html.parser')
+        article_text=[]
+
+        for p in soup.find_all(['p', 'div']):
+                text = p.get_text(separator=" ", strip=True)
+                cleaned=re.sub(r'\s+', ' ', text)
+                if len(text) > 8 and len(text.split())>7: 
+                    article_text.append(cleaned)
+        unique=list(set(article_text))
+        fetch_status.update(label="News fetched successfully", state="complete")
+
+     if unique:
+         print(unique)
+         start_time=time.time()
+         with st.status("AI is summarizing the news....") as ai_status:
+            # st.success(f"got news texts, sending to AI summarizer....")
+            response2=requests.post(
+                    'http://localhost:11434/api/generate',
+                    json={
+                        "model": "mistral",
+                        "prompt": f"Summarize the news headlines in bullet points only related to {category_list} from this given news text: \n\n {'- '.join(unique[:5])}",
+                        "prompt": f"summarize the news related to {categories} and all types of all are selected from the given news text, {'- '.join(unique[:5])}",
+                        "stream": False,
+                    }
+                )
+            reply=response2.json()["response"]
+            ai_status.update(label="summarization complete", state="complete")
+         end_time=time.time()
+         st.subheader("Categorized news summary")
+         st.markdown(f"{reply.strip()}")
+         duration=round(end_time-start_time, 2)
+         st.success(f"Summarization complete in {duration} seconds.")
+     else:
+        print(st.error("could not extract news from the selected chanel. Try another"))
+        st.stop()
+
+
+
+
+
