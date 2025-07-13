@@ -16,7 +16,7 @@ categories=st.multiselect("choose categories you are interested in: ", ['sports'
 if categories:
     category_list=','.join(categories)
 else:
-    category_list="All types of news categories"
+    category_list=['Geopolitics', 'Sports', 'Entertainment', 'Sciecne', 'Economy', 'Others']
 
 url_map={
      "The Hindu": "https://www.thehindu.com/",
@@ -53,8 +53,7 @@ if st.button("Fetch news"):
                     'http://localhost:11434/api/generate',
                     json={
                         "model": "mistral",
-                        "prompt": f"Summarize the news headlines in bullet points only related to {category_list} from this given news text: \n\n {'- '.join(unique[:5])}",
-                        "prompt": f"summarize the news related to {categories} and all types of all are selected from the given news text, {'- '.join(unique[:5])}",
+                        "prompt": f"Your are a news reporter, summarize the news headlines in bullet points only related to {category_list} from this given news text: \n\n {'- '.join(unique[:5])}",
                         "stream": False,
                     }
                 )
